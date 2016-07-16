@@ -45,10 +45,21 @@ void main() {
         struct FIRM_header firm;
         sdmmc_sdcard_readsectors(drive.partition[3].start,1, (u8*)&firm);
         char* magic="FIRM";
-        for(int i=0;i<4;i++)
-            if(magic[i]!=firm.magic[i])
-        return; //Check magic
-        for(;;); //Deadlock if checksum's right. for debugging
+        for(int i=0;i<4;i++) {
+            if(magic[i]!=firm.magic[i]) {
+                return; //Check magic
+            }
+        }
+        //Load segments into memory
+        int i;
+        for(i=0;i<4;i++) {
+            u32 startsector=firm.sections[i].offset/512;
+            u32 length=firm.sections[i].size/512+1;
+            u8* buf=(u8*)firm.sections[i].physical;
+            sdmmc_sdcard_readsectors(startsector,length,buf);
+        }
+        *((u32*)0x1FFFFFF8)=firm.arm11Entry;
+        ((void(*)())firm.arm9Entry)(); //Kill me
     }
 }
 void init() {
